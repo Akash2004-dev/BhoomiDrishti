@@ -1,0 +1,1 @@
+"""BhoomiDrishti Backend Core Package."""
