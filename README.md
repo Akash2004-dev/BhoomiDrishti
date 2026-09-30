@@ -54,7 +54,7 @@ For live satellite results, configure `GOOGLE_APPLICATION_CREDENTIALS`, `GEE_SER
 
 ## Configuration
 
-Copy `backend/.env.example` to `backend/.env`. Copy `frontend/.env.local.example` to `frontend/.env.local`. The backend defaults to the configured Gemini model `gemini-3.8-flash`; change `GEMINI_MODEL` only to a model enabled for your API project. Configure `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` only if the map panel is needed; restrict that browser key to the required APIs and allowed origins.
+Copy `backend/.env.example` to `backend/.env`. Copy `frontend/.env.local.example` to `frontend/.env.local`. The backend defaults to the configured Gemini model `gemini-3.5-flash`; change `GEMINI_MODEL` only to a model enabled for your API project. Configure `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` only if the map panel is needed; restrict that browser key to the required APIs and allowed origins.
 
 ## Deployment
 

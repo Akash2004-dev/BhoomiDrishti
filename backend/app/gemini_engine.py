@@ -1,5 +1,6 @@
 import base64
 import os
+import time
 
 import httpx
 from PIL import Image
@@ -41,28 +42,35 @@ def _generate(parts: list[dict], response_schema: dict | None = None) -> str:
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is not configured")
-    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     config = {"temperature": 0.1}
     if response_schema:
         config.update({"responseMimeType": "application/json", "responseSchema": response_schema})
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    try:
-        response = httpx.post(
-            url,
-            headers={"x-goog-api-key": key},
-            json={
-                "systemInstruction": {"parts": [{"text": "Describe visible crop condition cautiously for human review. Do not claim official status, insurance eligibility, or certainty."}]},
-                "contents": [{"role": "user", "parts": parts}],
-                "generationConfig": config,
-            },
-            timeout=120,
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except httpx.HTTPStatusError as exc:
-        raise RuntimeError(f"Gemini API returned HTTP {exc.response.status_code}") from None
-    except httpx.HTTPError:
-        raise RuntimeError("Gemini API could not be reached") from None
+    for attempt in range(3):
+        try:
+            response = httpx.post(
+                url,
+                headers={"x-goog-api-key": key},
+                json={
+                    "systemInstruction": {"parts": [{"text": "Describe visible crop condition cautiously for human review. Do not claim official status, insurance eligibility, or certainty."}]},
+                    "contents": [{"role": "user", "parts": parts}],
+                    "generationConfig": config,
+                },
+                timeout=120,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            break
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+                raise RuntimeError(f"Gemini API returned HTTP {status}") from None
+            time.sleep(2 ** attempt)
+        except httpx.HTTPError:
+            if attempt == 2:
+                raise RuntimeError("Gemini API could not be reached") from None
+            time.sleep(2 ** attempt)
     try:
         return "".join(part["text"] for part in payload["candidates"][0]["content"]["parts"] if "text" in part)
     except (KeyError, IndexError, TypeError):
